@@ -14,6 +14,14 @@ func main() {
 	// 1. Check DB connections (Stub)
 	log.Println("Initializing Postgres, Redis, and Neo4j connections...")
 
+	// Health Check Route (Root)
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status":  "online",
+			"service": "Cross-Team Knowledge Relay API",
+		})
+	})
+
 	// 2. Setup Routes
 	v1 := r.Group("/api/v1")
 	{
