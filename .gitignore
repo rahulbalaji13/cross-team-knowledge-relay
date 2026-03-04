@@ -1,0 +1,10 @@
+# Node / Next
+frontend/node_modules/
+frontend/.next/
+
+# Go build output
+backend/server
+
+# OS / editor
+.DS_Store
+.vscode/
