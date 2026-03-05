@@ -1,6 +1,6 @@
 # 🚀 Easy Deployment Guide: Vercel (Frontend) & Render (Backend)
 
-Because this is a "monorepo" (both frontend and backend folders are in the same GitHub repository), you need to tell Vercel and Render which folder to look at. Here is the foolproof, step-by-step guide to deploying without errors.
+Because this is a "monorepo" (both frontend and backend folders are in the same GitHub repository), you need to tell Vercel and Render which folder to look at. Here is the foolproof, step-by-step guide to deploying without errors
 
 ---
 
