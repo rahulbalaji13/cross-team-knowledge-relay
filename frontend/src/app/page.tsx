@@ -120,6 +120,10 @@ export default function Home() {
       <section className="grid gap-8 md:grid-cols-[1.2fr_1fr]">
         <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-neutral-900">
           <h2 className="mb-4 text-xl font-semibold">Live bounty feed + matches</h2>
+          <p className="mb-4 text-xs text-neutral-500">
+            Match suggestions come from the backend expert directory and are scored from skill level, skill recency, and reputation.
+            In this demo, expert names (for example Priya, Sara, and Maya) are seeded sample data rather than random users.
+          </p>
           <div className="space-y-4">
             {bounties.length === 0 ? (
               <p className="text-sm text-neutral-500">No bounties yet. Create one to test matching.</p>
