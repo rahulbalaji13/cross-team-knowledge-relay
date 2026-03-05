@@ -35,6 +35,7 @@ export default function Home() {
   const [bounties, setBounties] = useState<Bounty[]>([]);
   const [status, setStatus] = useState("Checking backend connection...");
   const [connected, setConnected] = useState(false);
+  const currentYear = new Date().getFullYear();
 
   const totalOpenValue = useMemo(
     () => bounties.reduce((total, item) => total + item.amount, 0),
@@ -192,7 +193,7 @@ export default function Home() {
       </section>
 
       <footer className="mt-10 border-t border-black/10 pt-4 text-center text-xs font-bold text-white dark:border-white/10">
-        © {new Date().getFullYear()} Cross-Team Knowledge Relay. Created by Rahul Balaji.
+        © {currentYear} Cross-Team Knowledge Relay. Created by Rahul Balaji.
       </footer>
     </main>
   );
