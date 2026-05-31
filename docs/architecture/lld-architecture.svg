@@ -1,0 +1,258 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1400" viewBox="0 0 2000 1400" role="img" aria-labelledby="title desc">
+<title id="title">Cross-Team Knowledge Relay Low-Level Design Architecture</title>
+<desc id="desc">Architecture diagram for Cross-Team Knowledge Relay.</desc>
+<defs>
+<filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#0f172a" flood-opacity="0.12"/></filter>
+<marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M2,2 L10,6 L2,10 Z" fill="#334155"/></marker>
+<marker id="arrowBlue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M2,2 L10,6 L2,10 Z" fill="#2563eb"/></marker>
+<marker id="arrowGreen" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M2,2 L10,6 L2,10 Z" fill="#16a34a"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f8fafc"/>
+<text x="60" y="65" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="34" font-weight="850" fill="#0f172a" text-anchor="start">Cross-Team Knowledge Relay — Low-Level Design (LLD)</text>
+<text x="62" y="98" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16" font-weight="400" fill="#475569" text-anchor="start">Detailed request, data, graph, scoring, state, and error-handling view for the bounty matching backend.</text>
+<rect x="35" y="140" width="370" height="1080" rx="24" fill="none" stroke="#2563eb" stroke-width="2" stroke-dasharray="8 7"/>
+<rect x="55" y="126" width="154" height="28" rx="14" fill="#f8fafc" stroke="#2563eb" stroke-width="1"/>
+<text x="72" y="146" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#2563eb" text-anchor="start">Frontend Inputs</text>
+<rect x="435" y="140" width="515" height="1080" rx="24" fill="none" stroke="#16a34a" stroke-width="2" stroke-dasharray="8 7"/>
+<rect x="455" y="126" width="162" height="28" rx="14" fill="#f8fafc" stroke="#16a34a" stroke-width="1"/>
+<text x="472" y="146" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#16a34a" text-anchor="start">Go API Internals</text>
+<rect x="980" y="140" width="505" height="1080" rx="24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-dasharray="8 7"/>
+<rect x="1000" y="126" width="250" height="28" rx="14" fill="#f8fafc" stroke="#7c3aed" stroke-width="1"/>
+<text x="1017" y="146" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#7c3aed" text-anchor="start">Persistence + Graph Queries</text>
+<rect x="1515" y="140" width="430" height="1080" rx="24" fill="none" stroke="#d97706" stroke-width="2" stroke-dasharray="8 7"/>
+<rect x="1535" y="126" width="242" height="28" rx="14" fill="#f8fafc" stroke="#d97706" stroke-width="1"/>
+<text x="1552" y="146" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#d97706" text-anchor="start">Async, Output, Reliability</text>
+<rect x="70" y="190" width="300" height="180" rx="16" fill="#dbeafe" stroke="#bfdbfe" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="70" y="190" width="300" height="8" rx="16" fill="#2563eb"/>
+<text x="88" y="222" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">Create Bounty Form</text>
+<text x="90" y="248" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• title, description</text>
+<text x="90" y="269" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• poster_team</text>
+<text x="90" y="290" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• skills text → array</text>
+<text x="90" y="311" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• bounty_amount</text>
+<text x="90" y="332" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• ttl_seconds</text>
+<rect x="70" y="450" width="300" height="175" rx="16" fill="#ffffff" stroke="#bfdbfe" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="70" y="450" width="300" height="8" rx="16" fill="#2563eb"/>
+<text x="88" y="482" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">HTTP Request</text>
+<text x="90" y="508" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• POST /api/v1/bounties</text>
+<text x="90" y="529" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• Content-Type: application/json</text>
+<text x="90" y="550" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• Returns 202 Accepted</text>
+<text x="90" y="571" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• GET /api/v1/bounties reads feed</text>
+<rect x="70" y="720" width="300" height="175" rx="16" fill="#ffffff" stroke="#bfdbfe" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="70" y="720" width="300" height="8" rx="16" fill="#2563eb"/>
+<text x="88" y="752" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">User Output</text>
+<text x="90" y="778" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• Live bounty feed</text>
+<text x="90" y="799" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• Top matched experts</text>
+<text x="90" y="820" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• Score and matched skills</text>
+<text x="90" y="841" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• Expires-at timestamp</text>
+<rect x="70" y="970" width="300" height="175" rx="16" fill="#ffffff" stroke="#bfdbfe" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="70" y="970" width="300" height="8" rx="16" fill="#2563eb"/>
+<text x="88" y="1002" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">Escrow Action</text>
+<text x="90" y="1028" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• POST /api/v1/escrow/{id}/release</text>
+<text x="90" y="1049" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• X-Idempotency-Key header</text>
+<text x="90" y="1070" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• Prevents duplicate payout</text>
+<rect x="470" y="180" width="205" height="145" rx="16" fill="#dcfce7" stroke="#bbf7d0" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="470" y="180" width="205" height="8" rx="16" fill="#16a34a"/>
+<text x="488" y="212" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">Router + CORS</text>
+<text x="490" y="238" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• ServeMux routes</text>
+<text x="490" y="259" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• OPTIONS handling</text>
+<text x="490" y="280" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• Allowed headers include</text>
+<text x="490" y="298" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">  X-Idempotency-Key</text>
+<rect x="710" y="180" width="205" height="145" rx="16" fill="#ffffff" stroke="#bbf7d0" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="710" y="180" width="205" height="8" rx="16" fill="#16a34a"/>
+<text x="728" y="212" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">DTO Decode</text>
+<text x="730" y="238" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• createBountyRequest</text>
+<text x="730" y="259" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• JSON decoder</text>
+<text x="730" y="280" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• Reject malformed payload</text>
+<rect x="470" y="390" width="205" height="165" rx="16" fill="#ffffff" stroke="#bbf7d0" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="470" y="390" width="205" height="8" rx="16" fill="#16a34a"/>
+<text x="488" y="422" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">Validation</text>
+<text x="490" y="448" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• title non-empty</text>
+<text x="490" y="469" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• skills length &gt; 0</text>
+<text x="490" y="490" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• amount &gt;= 1</text>
+<text x="490" y="511" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• TTL &gt;= 60 seconds</text>
+<rect x="710" y="390" width="205" height="165" rx="16" fill="#ffffff" stroke="#bbf7d0" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="710" y="390" width="205" height="8" rx="16" fill="#16a34a"/>
+<text x="728" y="422" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">Normalize Skills</text>
+<text x="730" y="448" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• trim whitespace</text>
+<text x="730" y="469" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• lowercase comparison key</text>
+<text x="730" y="490" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• deduplicate</text>
+<text x="730" y="511" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• preserve display names</text>
+<rect x="470" y="635" width="205" height="185" rx="16" fill="#ffffff" stroke="#bbf7d0" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="470" y="635" width="205" height="8" rx="16" fill="#16a34a"/>
+<text x="488" y="667" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">Bounty Builder</text>
+<text x="490" y="693" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• generate UTC ID</text>
+<text x="490" y="714" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• compute expiresAt</text>
+<text x="490" y="735" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• status = OPEN</text>
+<text x="490" y="756" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• attach posterTeam</text>
+<text x="490" y="777" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• attach matchedExperts</text>
+<rect x="710" y="635" width="205" height="185" rx="16" fill="#ffffff" stroke="#bbf7d0" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="710" y="635" width="205" height="8" rx="16" fill="#16a34a"/>
+<text x="728" y="667" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">Matcher Function</text>
+<text x="730" y="693" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• iterate experts</text>
+<text x="730" y="714" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• exclude same team</text>
+<text x="730" y="735" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• match requested skills</text>
+<text x="730" y="756" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• return top 3 candidates</text>
+<rect x="590" y="900" width="205" height="180" rx="16" fill="#ffffff" stroke="#bbf7d0" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="590" y="900" width="205" height="8" rx="16" fill="#16a34a"/>
+<text x="608" y="932" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">Scoring Formula</text>
+<text x="610" y="958" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• skillScore = level / 5</text>
+<text x="610" y="979" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• recency = e^(-λ days)</text>
+<text x="610" y="1000" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• score += 60% skill + 40%</text>
+<text x="610" y="1018" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">  recency</text>
+<text x="610" y="1039" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• add reputation / 5</text>
+<rect x="590" y="1110" width="205" height="75" rx="16" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="590" y="1110" width="205" height="8" rx="16" fill="#64748b"/>
+<text x="608" y="1142" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">Mutex-Protected Feed</text>
+<text x="610" y="1168" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• append newest bounty</text>
+<text x="610" y="1186" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">  first</text>
+<text x="610" y="1207" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• safe GET/POST access</text>
+<rect x="1015" y="180" width="205" height="170" rx="16" fill="#ede9fe" stroke="#ddd6fe" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="1015" y="180" width="205" height="8" rx="16" fill="#7c3aed"/>
+<text x="1033" y="212" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">Neo4j Write Shape</text>
+<text x="1035" y="238" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• MERGE Engineer / Team /</text>
+<text x="1035" y="256" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">  Skill</text>
+<text x="1035" y="277" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• MERGE Bounty</text>
+<text x="1035" y="298" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• MERGE REQUIRES edges</text>
+<text x="1035" y="319" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• MERGE HAS_SKILL edges</text>
+<rect x="1250" y="180" width="205" height="170" rx="16" fill="#ffffff" stroke="#ddd6fe" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="1250" y="180" width="205" height="8" rx="16" fill="#7c3aed"/>
+<text x="1268" y="212" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">Graph Schema</text>
+<text x="1270" y="238" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• Engineer{id,name,reputation}</text>
+<text x="1270" y="259" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• Skill{name,category}</text>
+<text x="1270" y="280" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• Team{name,domain}</text>
+<text x="1270" y="301" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• Bounty{id,amount,timestamp}</text>
+<rect x="1015" y="430" width="205" height="180" rx="16" fill="#ffffff" stroke="#ddd6fe" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="1015" y="430" width="205" height="8" rx="16" fill="#7c3aed"/>
+<text x="1033" y="462" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">Cypher Match Query</text>
+<text x="1035" y="488" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• MATCH poster → Team</text>
+<text x="1035" y="509" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• MATCH bounty → Skill ←</text>
+<text x="1035" y="527" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">  Engineer</text>
+<text x="1035" y="548" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• WHERE NOT same team</text>
+<text x="1035" y="569" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• ORDER BY finalScore DESC</text>
+<rect x="1250" y="430" width="205" height="180" rx="16" fill="#ffffff" stroke="#ddd6fe" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="1250" y="430" width="205" height="8" rx="16" fill="#7c3aed"/>
+<text x="1268" y="462" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">Relationships</text>
+<text x="1270" y="488" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• HAS_SKILL{level,last_used}</text>
+<text x="1270" y="509" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• BELONGS_TO</text>
+<text x="1270" y="530" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• REQUIRES{weight}</text>
+<text x="1270" y="551" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• SOLVED /</text>
+<text x="1270" y="569" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">  COLLABORATED_WITH</text>
+<rect x="1015" y="705" width="205" height="155" rx="16" fill="#ffffff" stroke="#ddd6fe" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="1015" y="705" width="205" height="8" rx="16" fill="#7c3aed"/>
+<text x="1033" y="737" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">PostgreSQL Tables</text>
+<text x="1035" y="763" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• Users</text>
+<text x="1035" y="784" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• Bounties</text>
+<text x="1035" y="805" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• Escrow</text>
+<text x="1035" y="826" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• Transactional source of</text>
+<text x="1035" y="844" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">  truth</text>
+<rect x="1250" y="705" width="205" height="155" rx="16" fill="#ffffff" stroke="#ddd6fe" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="1250" y="705" width="205" height="8" rx="16" fill="#7c3aed"/>
+<text x="1268" y="737" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">Redis</text>
+<text x="1270" y="763" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• Rate limit counters</text>
+<text x="1270" y="784" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• Idempotency keys</text>
+<text x="1270" y="805" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• Pub/Sub channels</text>
+<text x="1270" y="826" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• Fallback skill index</text>
+<rect x="1070" y="960" width="330" height="160" rx="16" fill="#ffe4e6" stroke="#fecdd3" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="1070" y="960" width="330" height="8" rx="16" fill="#e11d48"/>
+<text x="1088" y="992" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">Escrow State Machine</text>
+<text x="1090" y="1018" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• CREATED → HELD</text>
+<text x="1090" y="1039" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• HELD → MEETING_CONFIRMED</text>
+<text x="1090" y="1060" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• MEETING_CONFIRMED → RELEASED</text>
+<text x="1090" y="1081" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• HELD → REFUNDED on expiry/unresolved</text>
+<rect x="1545" y="190" width="360" height="160" rx="16" fill="#fef3c7" stroke="#fde68a" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="1545" y="190" width="360" height="8" rx="16" fill="#d97706"/>
+<text x="1563" y="222" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">Event Envelope</text>
+<text x="1565" y="248" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• type: BountyCreated</text>
+<text x="1565" y="269" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• bounty_id, poster_id/team</text>
+<text x="1565" y="290" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• skills[], amount, ttl</text>
+<text x="1565" y="311" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• trace_id + retry metadata</text>
+<rect x="1545" y="430" width="360" height="170" rx="16" fill="#ffffff" stroke="#fde68a" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="1545" y="430" width="360" height="8" rx="16" fill="#d97706"/>
+<text x="1563" y="462" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">Worker Execution</text>
+<text x="1565" y="488" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• consume event</text>
+<text x="1565" y="509" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• run graph query</text>
+<text x="1565" y="530" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• calculate final ranking</text>
+<text x="1565" y="551" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• publish MatchReady</text>
+<rect x="1545" y="690" width="360" height="160" rx="16" fill="#ffffff" stroke="#fde68a" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="1545" y="690" width="360" height="8" rx="16" fill="#d97706"/>
+<text x="1563" y="722" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">Notification Payload</text>
+<text x="1565" y="748" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• bounty_id</text>
+<text x="1565" y="769" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• expert_id, name, team</text>
+<text x="1565" y="790" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• score</text>
+<text x="1565" y="811" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• matched_skills[]</text>
+<rect x="1545" y="925" width="360" height="165" rx="16" fill="#ffffff" stroke="#fde68a" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="1545" y="925" width="360" height="8" rx="16" fill="#d97706"/>
+<text x="1563" y="957" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">Reliability Rules</text>
+<text x="1565" y="983" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• timeout + retry</text>
+<text x="1565" y="1004" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• dead-letter failed events</text>
+<text x="1565" y="1025" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• circuit-breaker on Neo4j</text>
+<text x="1565" y="1046" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• fallback Redis inverted index</text>
+<rect x="1545" y="1150" width="360" height="75" rx="16" fill="#ffffff" stroke="#fde68a" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="1545" y="1150" width="360" height="8" rx="16" fill="#d97706"/>
+<text x="1563" y="1182" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a" text-anchor="start">Observability</text>
+<text x="1565" y="1208" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">• request logs, queue depth, graph latency,</text>
+<text x="1565" y="1226" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#475569" text-anchor="start">  match count, payout audit trail</text>
+<line x1="370" y1="280" x2="470" y2="250" stroke="#2563eb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+<rect x="372.4" y="242.0" width="95.2" height="22" rx="11" fill="#ffffff" stroke="#cbd5e1"/>
+<text x="420.0" y="258.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#475569" text-anchor="middle">submit JSON</text>
+<line x1="675" y1="250" x2="710" y2="250" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="662.9" y="227.0" width="59.2" height="22" rx="11" fill="#ffffff" stroke="#cbd5e1"/>
+<text x="692.5" y="243.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#475569" text-anchor="middle">decode</text>
+<path d="M812 325 C812 360, 575 360, 575 390" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)"/>
+<line x1="675" y1="472" x2="710" y2="472" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="641.3" y="449.0" width="102.4" height="22" rx="11" fill="#ffffff" stroke="#cbd5e1"/>
+<text x="692.5" y="465.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#475569" text-anchor="middle">clean skills</text>
+<path d="M812 555 C812 590, 575 590, 575 635" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)"/>
+<line x1="675" y1="727" x2="710" y2="727" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="666.5" y="704.0" width="52.0" height="22" rx="11" fill="#ffffff" stroke="#cbd5e1"/>
+<text x="692.5" y="720.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#475569" text-anchor="middle">match</text>
+<path d="M812 820 C812 865, 705 865, 692 900" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)"/>
+<line x1="692" y1="1080" x2="692" y2="1110" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="666.0" y="1072.0" width="52.0" height="22" rx="11" fill="#ffffff" stroke="#cbd5e1"/>
+<text x="692.0" y="1088.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#475569" text-anchor="middle">store</text>
+<path d="M590 1148 C410 1148, 405 780, 370 780" fill="none" stroke="#2563eb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+<rect x="423.2" y="1113.0" width="73.6" height="22" rx="11" fill="#ffffff" stroke="#cbd5e1"/>
+<text x="460" y="1129" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#475569" text-anchor="middle">GET feed</text>
+<line x1="915" y1="727" x2="1015" y2="520" stroke="#7c3aed" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="913.8" y="600.5" width="102.4" height="22" rx="11" fill="#ffffff" stroke="#cbd5e1"/>
+<text x="965.0" y="616.5" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#475569" text-anchor="middle">Cypher query</text>
+<line x1="1220" y1="520" x2="1250" y2="520" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="1212.6" y="497.0" width="44.8" height="22" rx="11" fill="#ffffff" stroke="#cbd5e1"/>
+<text x="1235.0" y="513.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#475569" text-anchor="middle">uses</text>
+<path d="M812 727 C950 680, 975 285, 1015 265" fill="none" stroke="#7c3aed" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="868.6" y="597.0" width="152.8" height="22" rx="11" fill="#ffffff" stroke="#cbd5e1"/>
+<text x="945" y="613" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#475569" text-anchor="middle">write bounty/skills</text>
+<line x1="1220" y1="265" x2="1250" y2="265" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="1205.4" y="242.0" width="59.2" height="22" rx="11" fill="#ffffff" stroke="#cbd5e1"/>
+<text x="1235.0" y="258.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#475569" text-anchor="middle">schema</text>
+<path d="M575 820 C860 875, 970 780, 1015 780" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)"/>
+<path d="M795 990 C1000 1030, 1045 1040, 1070 1040" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)"/>
+<path d="M370 1055 C660 1030, 880 1030, 1070 1040" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)"/>
+<path d="M1400 1040 C1495 1040, 1495 1010, 1545 1010" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)"/>
+<line x1="1455" y1="785" x2="1545" y2="775" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="1466.8" y="757.0" width="66.4" height="22" rx="11" fill="#ffffff" stroke="#cbd5e1"/>
+<text x="1500.0" y="773.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#475569" text-anchor="middle">pub/sub</text>
+<path d="M915 727 C1220 660, 1420 300, 1545 270" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)"/>
+<line x1="1725" y1="350" x2="1725" y2="430" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="1691.8" y="367.0" width="66.4" height="22" rx="11" fill="#ffffff" stroke="#cbd5e1"/>
+<text x="1725.0" y="383.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#475569" text-anchor="middle">consume</text>
+<path d="M1545 515 C1480 515, 1490 520, 1455 520" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)"/>
+<line x1="1725" y1="600" x2="1725" y2="690" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="1681.0" y="622.0" width="88.0" height="22" rx="11" fill="#ffffff" stroke="#cbd5e1"/>
+<text x="1725.0" y="638.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#475569" text-anchor="middle">MatchReady</text>
+<path d="M1545 770 C1240 795, 950 830, 915 727" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)"/>
+<path d="M1545 770 C1260 830, 680 875, 370 780" fill="none" stroke="#16a34a" stroke-width="2.2" marker-end="url(#arrowGreen)"/>
+<rect x="936.4" y="839.0" width="167.2" height="22" rx="11" fill="#ffffff" stroke="#cbd5e1"/>
+<text x="1020" y="855" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#475569" text-anchor="middle">WebSocket / UI update</text>
+<line x1="1725" y1="860" x2="1725" y2="925" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="1691.8" y="869.5" width="66.4" height="22" rx="11" fill="#ffffff" stroke="#cbd5e1"/>
+<text x="1725.0" y="885.5" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#475569" text-anchor="middle">monitor</text>
+<line x1="1725" y1="1090" x2="1725" y2="1150" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="1691.8" y="1097.0" width="66.4" height="22" rx="11" fill="#ffffff" stroke="#cbd5e1"/>
+<text x="1725.0" y="1113.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#475569" text-anchor="middle">metrics</text>
+<rect x="45" y="1260" width="1900" height="90" rx="18" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" filter="url(#shadow)"/>
+<rect x="45" y="1260" width="1900" height="8" rx="18" fill="#0f172a"/>
+<text x="63" y="1292" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="700" fill="#0f172a" text-anchor="start">Concrete endpoint contract</text>
+<text x="65" y="1318" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="400" fill="#475569" text-anchor="start">• Input: POST /api/v1/bounties with title, description, poster_team, skills[], bounty_amount, ttl_seconds. Output: 202 Accepted with bounty{id,status,expiresAt,matchedExperts[]}. Error paths: 400 invalid payload/missing fields, 405</text>
+<text x="65" y="1336" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="400" fill="#475569" text-anchor="start">  method not allowed, circuit-breaker fallback for graph latency.</text>
+</svg>
