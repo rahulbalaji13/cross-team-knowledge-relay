@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,8 +14,8 @@ function backendConfig() {
 export async function GET() {
   try {
     const { base, token } = backendConfig();
-    const upstream = await fetch(`${base}/api/v1/bounties`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const upstream = await fetch(\`\${base}/api/v1/bounties\`, {
+      headers: { Authorization: \`Bearer \${token}\` },
       cache: "no-store",
       signal: AbortSignal.timeout(8000),
     });
@@ -28,15 +29,22 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  if (request.headers.get("origin") !== request.nextUrl.origin) {
+    return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
+  }
+  if (!readSession(request)) {
+    return NextResponse.json({ error: "Sign in with GitHub to post a bounty" }, { status: 401 });
+  }
+
   try {
     const { base, token } = backendConfig();
     const body = await request.text();
     if (new TextEncoder().encode(body).byteLength > 64 * 1024) {
       return NextResponse.json({ error: "Request body is too large" }, { status: 413 });
     }
-    const upstream = await fetch(`${base}/api/v1/bounties`, {
+    const upstream = await fetch(\`\${base}/api/v1/bounties\`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      headers: { Authorization: \`Bearer \${token}\`, "Content-Type": "application/json" },
       body,
       cache: "no-store",
       signal: AbortSignal.timeout(10000),
