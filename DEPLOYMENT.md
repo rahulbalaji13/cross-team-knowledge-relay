@@ -67,15 +67,3 @@ Vercel is the creator of Next.js, so deployment is almost entirely automated.
 
 3. ❌ **Frontend gets "Network Error" trying to reach the API**
    - **Fix**: Ensure your `NEXT_PUBLIC_WS_URL` on Vercel starts with `https://` and does **not** have a trailing slash (`/`).
-
-
-## Frontend password gate
-
-The frontend requires a shared site password before it renders. Add these server-side environment variables in Vercel and redeploy:
-
-- `SITE_ACCESS_PASSWORD`: a long, unique passphrase with at least 16 characters. Use a password manager to generate it.
-- `SITE_SESSION_SECRET`: a random secret with at least 32 characters, used to sign the HTTP-only session cookie.
-
-The browser never receives either secret. Access sessions expire after 12 hours. Use **Lock** in the header to end a session early. If the values are missing or too short, the app stays locked and displays a setup message.
-
-This is a shared front-door password for a private preview. It does not protect the Render API from direct requests and is not a replacement for user accounts or API authorization. Do not use it to protect confidential information.

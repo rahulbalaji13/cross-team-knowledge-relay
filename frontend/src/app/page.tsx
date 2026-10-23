@@ -3,7 +3,6 @@
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import RelayAssistant from "./components/RelayAssistant";
 import VoiceInputButton from "./components/VoiceInputButton";
-import LockButton from "./components/LockButton";
 
 type MatchedExpert = {
   expert_id: string;
@@ -154,7 +153,6 @@ export default function Home() {
               <ThemeIcon theme={theme} />
               <span>{theme === "dark" ? "Light" : "Dark"}</span>
             </button>
-            <LockButton />
           </nav>
         </div>
       </header>
