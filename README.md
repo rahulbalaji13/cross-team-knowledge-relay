@@ -1,40 +1,41 @@
 # Cross-Team Knowledge Relay
 
-A prototype for posting engineering help requests and surfacing relevant experts from other teams. The current application is a small, deployable demo: a Next.js UI, a Go API, PostgreSQL persistence for bounties, and Server-Sent Events (SSE) for live feed updates.
+A web application prototype for sharing engineering help requests across teams. The current implementation includes a Next.js dashboard, GitHub OAuth sign-in, a Go API, PostgreSQL persistence, and live feed updates over Server-Sent Events (SSE).
 
-## What runs today
+## Implemented
 
 - Create and list help requests (called bounties in the UI).
-- Persist requests in PostgreSQL; the API creates the required table and indexes at startup.
-- Suggest up to three matches from five seeded demo experts using skill overlap, skill recency, and reputation.
-- Stream newly created requests to connected browsers over SSE.
-- Keep the API bearer token on the Next.js server; the browser calls same-origin Next.js routes.
+- Store requests in PostgreSQL. The Go API creates the table and indexes at startup.
+- Authenticate posting users with GitHub OAuth; sessions are HMAC-signed, HTTP-only, secure in production, and expire after 12 hours.
+- Keep the backend bearer token server-side in Next.js. The browser calls same-origin routes.
+- Send live bounty-created events to connected browsers over SSE.
+- Suggest up to three experts from five seeded demo profiles using skill overlap, skill recency, and reputation.
 
-## Current limits
+## Known limits before production
 
-This is a portfolio prototype, not a production employee directory or payment product. Expert profiles are hard-coded demo data. Matching runs in the API process. The API has a simple per-process rate limiter; it is not a distributed limiter. OAuth/user identity, tenant authorization, abuse controls, operational dashboards, and automated integration tests still need to be added before unrestricted public use. There are no real payments; the displayed amount is illustrative.
+This is a portfolio application, not a production employee directory or payments product. Expert profiles remain hard-coded; matching runs in-process; database setup uses startup DDL rather than versioned migrations; and the rate limiter is per-process, not shared across replicas. Any GitHub user who can sign in can currently post. Add an organization allowlist or moderation, distributed abuse controls/WAF, ownership and audit policy, versioned migrations, CI checks, and PostgreSQL integration tests before a broad public launch. The amounts are illustrative only; no money moves.
 
 Architecture diagrams and the older interview guide include proposed components such as Neo4j, Redis, Kafka, and escrow. Those are design ideas and are not part of the running request path.
 
 ## Local development
 
-Requirements: Docker Compose.
+Requirements: Docker Compose, Node.js, and a GitHub OAuth app.
 
-```sh
-docker compose up --build
-```
+1. Start PostgreSQL and the Go API: `docker compose up --build`.
+2. Copy `frontend/.env.example` to `frontend/.env.local`.
+3. Create a GitHub OAuth app with callback `http://localhost:3000/api/auth/callback`; set its client ID and secret in `frontend/.env.local`.
+4. Set `SESSION_SECRET` to a random value of at least 32 characters.
+5. From `frontend`, run `npm ci && npm run dev`.
 
-The API is available at `http://localhost:8080`. To run the frontend, set `RELAY_API_URL=http://localhost:8080` and `RELAY_API_TOKEN=local-only-change-this-token` in `frontend/.env.local`, then run `npm ci && npm run dev` from `frontend`. The API creates its table on startup.
+The UI is available at `http://localhost:3000`. The API listens on `http://localhost:8080`.
 
 ## API
 
-- `GET /api/v1/health` — liveness/readiness check including database connectivity.
+- `GET /api/v1/health` — readiness check including PostgreSQL connectivity.
 - `GET /api/v1/bounties` — latest unexpired requests (maximum 100).
-- `POST /api/v1/bounties` — create a request; requires `Authorization: Bearer <API_BEARER_TOKEN>`.
-- `GET /api/v1/events` — SSE stream of newly created requests.
-
-The public web UI uses same-origin server routes under `/api/bounties`; do not put the backend bearer token in a `NEXT_PUBLIC_*` variable.
+- `POST /api/v1/bounties` — create a request; requires the backend bearer token and authenticated creator field.
+- `GET /api/v1/events` — SSE stream of new requests.
 
 ## Deployment
 
-See [DEPLOYMENT.md](DEPLOYMENT.md). Keep the site read-only or behind an identity-aware access layer until user authentication and abuse controls are configured.
+See [DEPLOYMENT.md](DEPLOYMENT.md) for service configuration and the public-launch checklist.
