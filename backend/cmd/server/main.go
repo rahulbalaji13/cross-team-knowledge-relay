@@ -66,7 +66,7 @@ type app struct {
 	allowedOrigins map[string]bool
 	limits *rateLimiter
 }
-type rateLimiter struct { mu sync.Mutex; clients map[string]bucket }
+type rateLimiter struct { mu sync.Mutex; clients map[string]bucket; checks int }
 type bucket struct { count int; reset time.Time }
 
 var experts = []expert{
@@ -142,8 +142,15 @@ func (a *app) middleware(next http.Handler) http.Handler {
 func clientIP(r *http.Request) string { host,_,err:=net.SplitHostPort(r.RemoteAddr); if err==nil { return host }; return r.RemoteAddr }
 func (l *rateLimiter) allow(ip string) bool {
 	l.mu.Lock(); defer l.mu.Unlock()
-	now:=time.Now(); b,ok:=l.clients[ip]
-	if !ok || now.After(b.reset) { l.clients[ip]=bucket{count:1,reset:now.Add(time.Minute)}; return true }
+	now:=time.Now()
+	l.checks++
+	if l.checks%100==0 { for key,value:=range l.clients { if now.After(value.reset) { delete(l.clients,key) } } }
+	b,ok:=l.clients[ip]
+	if !ok || now.After(b.reset) {
+		if len(l.clients)>=10000 { return false }
+		l.clients[ip]=bucket{count:1,reset:now.Add(time.Minute)}
+		return true
+	}
 	if b.count>=120 { return false }; b.count++; l.clients[ip]=b; return true
 }
 func (a *app) root(w http.ResponseWriter,r *http.Request) { if r.URL.Path!="/" { http.NotFound(w,r); return }; writeJSON(w,http.StatusOK,map[string]string{"service":"Cross-Team Knowledge Relay API","status":"online"}) }
@@ -204,7 +211,7 @@ func (a *app) events(w http.ResponseWriter,r *http.Request) {
 		select {
 		case <-r.Context().Done(): return
 		case <-ticker.C:
-			rows,err:=a.db.QueryContext(r.Context(),`SELECT id,title,description,skills,amount,expires_at,status,poster_team,matched_experts,created_at FROM bounties WHERE created_at > $1 ORDER BY created_at ASC LIMIT 100`,cursor)
+			rows,err:=a.db.QueryContext(r.Context(),`SELECT id,title,description,skills,amount,expires_at,status,poster_team,created_by,matched_experts,created_at FROM bounties WHERE created_at > $1 ORDER BY created_at ASC LIMIT 100`,cursor)
 			if err!=nil { fmt.Fprint(w,"event: error\ndata: {\"error\":\"stream temporarily unavailable\"}\n\n"); flusher.Flush(); continue }
 			for rows.Next() {
 				b,err:=scanBounty(rows); if err!=nil { continue }
