@@ -2,6 +2,7 @@
 
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import RelayAssistant from "./components/RelayAssistant";
+import VoiceInputButton from "./components/VoiceInputButton";
 
 type MatchedExpert = {
   expert_id: string;
@@ -244,24 +245,43 @@ export default function Home() {
               <p className="mt-1 text-sm leading-6 text-slate-500">Give teammates enough context to know how they can help.</p>
             </div>
             <div className="space-y-4">
-              <Field label="Request title" hint="Be clear and specific"><input required minLength={3} maxLength={200} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. Need help reducing API latency" className="form-control" /></Field>
+              <Field label="Request title" hint="Be clear and specific">
+                <div className="flex items-center gap-2">
+                  <input required minLength={3} maxLength={200} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. Need help reducing API latency" className="form-control min-w-0 flex-1" />
+                  <VoiceInputButton fieldLabel="request title" onTranscript={(transcript) => setTitle((current) => appendVoiceTranscript(current, transcript))} />
+                </div>
+              </Field>
               <Field label="What’s the blocker?" hint="A little context goes a long way">
                 <textarea maxLength={4000} rows={4} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="What have you tried? What would a useful answer look like?" className="form-control min-h-28 resize-y" />
-                <span className="mt-1.5 block text-right text-xs text-slate-400">{description.length}/4000</span>
+                <div className="mt-2 flex items-start justify-between gap-2">
+                  <span className="text-xs text-slate-400">{description.length}/4000</span>
+                  <VoiceInputButton fieldLabel="blocker description" onTranscript={(transcript) => setDescription((current) => appendVoiceTranscript(current, transcript))} />
+                </div>
               </Field>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label="Your team"><input required maxLength={80} value={posterTeam} onChange={(event) => setPosterTeam(event.target.value)} placeholder="e.g. Commerce" className="form-control" /></Field>
+                <Field label="Your team">
+                  <div className="flex items-center gap-2">
+                    <input required maxLength={80} value={posterTeam} onChange={(event) => setPosterTeam(event.target.value)} placeholder="e.g. Commerce" className="form-control min-w-0 flex-1" />
+                    <VoiceInputButton fieldLabel="team name" onTranscript={(transcript) => setPosterTeam((current) => appendVoiceTranscript(current, transcript))} />
+                  </div>
+                </Field>
                 <Field label="Reward amount" hint="Demo value only">
                   <div className="relative"><span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-slate-400">$</span><input type="number" min={1} max={100000} required value={amount} onChange={(event) => setAmount(Number(event.target.value))} className="form-control pl-7" /></div>
                 </Field>
               </div>
-              <Field label="Skills you need" hint="Separate skills with commas (up to 20)"><input required value={skills} onChange={(event) => setSkills(event.target.value)} placeholder="Go, API design, PostgreSQL" className="form-control" /></Field>
+              <Field label="Skills you need" hint="Separate skills with commas (up to 20)">
+                <div className="flex items-center gap-2">
+                  <input required value={skills} onChange={(event) => setSkills(event.target.value)} placeholder="Go, API design, PostgreSQL" className="form-control min-w-0 flex-1" />
+                  <VoiceInputButton fieldLabel="required skills" onTranscript={(transcript) => setSkills((current) => appendVoiceTranscript(current, transcript))} />
+                </div>
+              </Field>
               <Field label="Request stays open">
                 <select value={ttlSeconds} onChange={(event) => setTtlSeconds(Number(event.target.value))} className="form-control">
                   <option value={3600}>1 hour</option><option value={86400}>1 day</option><option value={604800}>7 days</option><option value={2592000}>30 days</option>
                 </select>
               </Field>
             </div>
+            <p className="mt-4 rounded-lg bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-500">Voice input uses your browser’s speech recognition; some browsers may process audio through an online service.</p>
             {submitMessage && <div role={submitState === "error" ? "alert" : "status"} className={"mt-4 rounded-xl px-3.5 py-3 text-sm leading-5 " + (submitState === "error" ? "bg-rose-50 text-rose-800" : "bg-emerald-50 text-emerald-800")}>{submitMessage}</div>}
             <button type="submit" disabled={submitState === "submitting"} className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm shadow-indigo-200 transition hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-wait disabled:opacity-70">
               {submitState === "submitting" ? <><span className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />Finding teammates…</> : <>Post request <span aria-hidden="true">→</span></>}
@@ -278,6 +298,12 @@ export default function Home() {
       <RelayAssistant />
     </main>
   );
+}
+
+function appendVoiceTranscript(current: string, transcript: string) {
+  const spoken = transcript.trim();
+  if (!spoken) return current;
+  return current.trim() ? current.trimEnd() + " " + spoken : spoken;
 }
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
