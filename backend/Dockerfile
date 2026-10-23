@@ -6,7 +6,7 @@ COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/server ./cmd/server
 
 FROM alpine:3.21
-RUN apk add --no-cache ca-certificates && addgroup -S app && adduser -S -G app app
+RUN apk add --no-cache ca-certificates wget && addgroup -S app && adduser -S -G app app
 COPY --from=build /out/server /usr/local/bin/server
 USER app
 EXPOSE 8080
