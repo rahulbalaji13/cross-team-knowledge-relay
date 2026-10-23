@@ -22,7 +22,8 @@ type Bounty = {
   matchedExperts: MatchedExpert[];
 };
 
-const API_URL = "/api/bounties";
+const DEFAULT_API_URL = "https://cross-team-knowledge-relay.onrender.com";
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_URL).replace(/\/$/, "");
 
 export default function Home() {
   const [title, setTitle] = useState("");
@@ -48,7 +49,7 @@ export default function Home() {
 
   async function loadBounties() {
     try {
-      const response = await fetch(API_URL, { cache: "no-store" });
+      const response = await fetch(`${API_URL}/api/v1/bounties`, { cache: "no-store" });
       if (!response.ok) {
         throw new Error(`Failed with status ${response.status}`);
       }
@@ -64,15 +65,6 @@ export default function Home() {
 
   useEffect(() => {
     loadBounties();
-    const events = new EventSource("/api/bounties/stream");
-    events.onopen = () => setConnected(true);
-    events.addEventListener("bounty.created", (event) => {
-      const bounty = JSON.parse((event as MessageEvent).data) as Bounty;
-      setBounties((current) => [bounty, ...current.filter((item) => item.id !== bounty.id)]);
-      setStatus("Live update received from the bounty service.");
-    });
-    events.onerror = () => setConnected(false);
-    return () => events.close();
   }, []);
 
   async function submitBounty(event: FormEvent<HTMLFormElement>) {
@@ -80,7 +72,7 @@ export default function Home() {
     setStatus("Submitting bounty and running cross-team matching...");
 
     try {
-      const response = await fetch(API_URL, {
+      const response = await fetch(`${API_URL}/api/v1/bounties`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -117,16 +109,13 @@ export default function Home() {
           Post technical blockers and get ranked experts outside your own team.
         </p>
         <p className={`mt-4 text-sm font-medium ${connected ? "text-green-600" : "text-amber-600"}`}>{status}</p>
-        <div className="mt-3 flex items-center gap-3 text-sm">
-          <span>Demo mode: submissions are posted as Community.</span>
-        </div>
       </header>
 
       <section className="mb-8 grid gap-4 md:grid-cols-4">
         <MetricCard label="Open bounties" value={String(bounties.length)} />
         <MetricCard label="Total reward value" value={`$${totalOpenValue}`} />
         <MetricCard label="Cross-team matches" value={String(totalMatches)} />
-        <MetricCard label="Bounty API route" value={API_URL} />
+        <MetricCard label="Backend URL" value={API_URL} />
       </section>
 
       <section className="grid flex-1 gap-8 md:grid-cols-[1.2fr_1fr]">
