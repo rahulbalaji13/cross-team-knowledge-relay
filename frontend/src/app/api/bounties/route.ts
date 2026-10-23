@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,9 +31,6 @@ export async function POST(request: NextRequest) {
   if (request.headers.get("origin") !== request.nextUrl.origin) {
     return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
   }
-  const session = readSession(request);
-  if (!session) return NextResponse.json({ error: "Sign in with GitHub to post a bounty" }, { status: 401 });
-
   try {
     const { base, token } = backendConfig();
     const body = await request.text();
@@ -48,11 +44,11 @@ export async function POST(request: NextRequest) {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
       return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
     }
-    const authenticatedBody = { ...(payload as Record<string, unknown>), created_by: session.login };
+    const communityBody = { ...(payload as Record<string, unknown>), created_by: "Community" };
     const upstream = await fetch(`${base}/api/v1/bounties`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify(authenticatedBody),
+      body: JSON.stringify(communityBody),
       cache: "no-store",
       signal: AbortSignal.timeout(10000),
     });
