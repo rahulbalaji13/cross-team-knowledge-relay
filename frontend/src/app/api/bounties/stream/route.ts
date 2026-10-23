@@ -1,7 +1,8 @@
+import { NextRequest } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const base = process.env.RELAY_API_URL?.replace(/\/$/, "");
   const token = process.env.RELAY_API_TOKEN;
   if (!base || !token) {
@@ -9,7 +10,7 @@ export async function GET() {
   }
   try {
     const upstream = await fetch(`${base}/api/v1/events`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, ...(request.headers.get("last-event-id") ? { "Last-Event-ID": request.headers.get("last-event-id")! } : {}) },
       cache: "no-store",
       signal: AbortSignal.timeout(60_000),
     });
