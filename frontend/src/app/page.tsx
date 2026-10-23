@@ -262,17 +262,17 @@ export default function Home() {
                 <Field label="Your team">
                   <div className="flex items-center gap-2">
                     <input required maxLength={80} value={posterTeam} onChange={(event) => setPosterTeam(event.target.value)} placeholder="e.g. Commerce" className="form-control min-w-0 flex-1" />
-                    <VoiceInputButton fieldLabel="team name" onTranscript={(transcript) => setPosterTeam((current) => appendVoiceTranscript(current, transcript))} />
+                    <VoiceInputButton fieldLabel="team name" onTranscript={(transcript) => setPosterTeam(transcript.trim())} />
                   </div>
                 </Field>
                 <Field label="Reward amount" hint="Demo value only">
                   <div className="relative"><span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-slate-400">$</span><input type="number" min={1} max={100000} required value={amount} onChange={(event) => setAmount(Number(event.target.value))} className="form-control pl-7" /></div>
                 </Field>
               </div>
-              <Field label="Skills you need" hint="Separate skills with commas (up to 20)">
+              <Field label="Skills you need" hint="Separate skills with commas or say “and” (up to 20)">
                 <div className="flex items-center gap-2">
                   <input required value={skills} onChange={(event) => setSkills(event.target.value)} placeholder="Go, API design, PostgreSQL" className="form-control min-w-0 flex-1" />
-                  <VoiceInputButton fieldLabel="required skills" onTranscript={(transcript) => setSkills((current) => appendVoiceTranscript(current, transcript))} />
+                  <VoiceInputButton fieldLabel="required skills" onTranscript={(transcript) => setSkills((current) => appendSkillTranscript(current, transcript))} />
                 </div>
               </Field>
               <Field label="Request stays open">
@@ -304,6 +304,13 @@ function appendVoiceTranscript(current: string, transcript: string) {
   const spoken = transcript.trim();
   if (!spoken) return current;
   return current.trim() ? current.trimEnd() + " " + spoken : spoken;
+}
+
+function appendSkillTranscript(current: string, transcript: string) {
+  const spoken = transcript.trim().replace(/\\s+(?:and|comma)\\s+/gi, ", ");
+  if (!spoken) return current;
+  const existing = current.trim().replace(/[，,\\s]+$/, "");
+  return existing ? existing + ", " + spoken.replace(/^[，,\\s]+/, "") : spoken;
 }
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
