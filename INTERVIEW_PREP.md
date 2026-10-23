@@ -230,7 +230,7 @@ UI update
 ## 9. Authentication & Security
 
 ### Current state
-- **Authentication:** None implemented. README mentions GitHub OAuth as target architecture.
+- **Authentication:** None implemented. Demo posts are open and attributed to `Community`; authentication is a future requirement for real organizational use.
 - **Authorization:** None implemented. Any caller can read experts, create bounties, and release escrow stub with only an idempotency header.
 - **Password handling:** None.
 - **JWT/session flow:** Not implemented.
@@ -251,7 +251,7 @@ UI update
 8. Socket hook passes identity as query param, not a signed token.
 
 ### Interview defense
-"The demo emphasizes architecture and matching flow. For production, the first security milestone is GitHub/enterprise SSO, JWT/session validation middleware, per-tenant RBAC, body limits, structured validation, rate limiting, restrictive CORS, audit logs, and wiring escrow release to the transactional service."
+"The demo emphasizes architecture and matching flow. For production, the first security milestone is authentication and authorization, per-tenant RBAC, body limits, structured validation, distributed rate limiting, restrictive CORS, audit logs, and wiring escrow release to the transactional service."
 
 ## 10. Dependency Analysis
 
