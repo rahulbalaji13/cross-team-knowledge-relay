@@ -48,7 +48,7 @@ export default function Home() {
 
   async function loadBounties() {
     try {
-      const response = await fetch(API_URL), { cache: "no-store" });
+      const response = await fetch(API_URL, { cache: "no-store" });
       if (!response.ok) {
         throw new Error(`Failed with status ${response.status}`);
       }
@@ -80,7 +80,7 @@ export default function Home() {
     setStatus("Submitting bounty and running cross-team matching...");
 
     try {
-      const response = await fetch(API_URL), {
+      const response = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
