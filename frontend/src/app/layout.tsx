@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Cross-Team Knowledge Relay",
-  description: "Post bounties and match experts across teams.",
+  title: "Knowledge Relay | Cross-Team Help",
+  description: "Share engineering blockers and find teammates with the skills to help.",
 };
 
 export default function RootLayout({
