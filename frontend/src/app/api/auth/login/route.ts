@@ -7,7 +7,8 @@ export async function GET(request: NextRequest) {
   const clientId = process.env.GITHUB_CLIENT_ID;
   if (!clientId) return new NextResponse("GitHub OAuth is not configured", { status: 503 });
   const state = randomBytes(32).toString("base64url");
-  const callback = new URL("/api/auth/callback", request.nextUrl.origin).toString();
+  const site = process.env.PUBLIC_SITE_URL || request.nextUrl.origin;
+  const callback = new URL("/api/auth/callback", site).toString();
   const authorize = new URL("https://github.com/login/oauth/authorize");
   authorize.searchParams.set("client_id", clientId);
   authorize.searchParams.set("redirect_uri", callback);
