@@ -13,7 +13,7 @@ A web application prototype for sharing engineering help requests across teams. 
 
 ## Known limits before production
 
-This is a portfolio application, not a production employee directory or payments product. Expert profiles remain hard-coded; matching runs in-process; database setup uses startup DDL rather than versioned migrations; and the rate limiter is per-process, not shared across replicas. Any GitHub user who can sign in can currently post. Add an organization allowlist or moderation, distributed abuse controls/WAF, ownership and audit policy, versioned migrations, CI checks, and PostgreSQL integration tests before a broad public launch. The amounts are illustrative only; no money moves.
+This is a portfolio application, not a production employee directory or payments product. Expert profiles remain hard-coded; matching runs in-process; database setup uses startup DDL rather than versioned migrations; and the rate limiter is per-process, not shared across replicas. If `GITHUB_ALLOWED_USERS` is unset, any GitHub account can sign in and post; configure it for a controlled preview. A broad public launch still needs distributed abuse controls/WAF, ownership and retention policy, versioned migrations, and PostgreSQL integration tests. The amounts are illustrative only; no money moves.
 
 Architecture diagrams and the older interview guide include proposed components such as Neo4j, Redis, Kafka, and escrow. Those are design ideas and are not part of the running request path.
 
