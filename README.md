@@ -31,7 +31,7 @@ The UI is available at `http://localhost:3000`. The API listens on `http://local
 
 - `GET /api/v1/health` — readiness check including PostgreSQL connectivity.
 - `GET /api/v1/bounties` — latest unexpired requests (maximum 100).
-- `POST /api/v1/bounties` — create a request; requires the backend bearer token and authenticated creator field.
+- `POST /api/v1/bounties` — create a request; the server adds a `Community` creator and uses its backend bearer token.
 - `GET /api/v1/events` — SSE stream of new requests.
 
 ## Deployment
