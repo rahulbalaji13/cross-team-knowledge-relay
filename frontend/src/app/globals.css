@@ -227,3 +227,41 @@ html[data-theme="dark"] .form-control:disabled {
     transition-duration: 0.01ms !important;
   }
 }
+
+.relay-chat-widget {
+  position: fixed;
+  z-index: 50;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.relay-chat-panel {
+  display: flex;
+  width: min(24rem, calc(100vw - 2rem));
+  height: min(36rem, calc(100dvh - 6.5rem));
+  flex-direction: column;
+}
+
+html[data-theme="dark"] [class~="hover:bg-indigo-100"]:hover {
+  background-color: #2e3965 !important;
+}
+
+html[data-theme="dark"] [class~="focus:bg-white"]:focus {
+  background-color: #131f33 !important;
+}
+
+@media (max-width: 480px) {
+  .relay-chat-widget {
+    right: max(0.75rem, env(safe-area-inset-right));
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  .relay-chat-panel {
+    width: min(24rem, calc(100vw - 1.5rem));
+    height: min(34rem, calc(100dvh - 6rem));
+  }
+}
