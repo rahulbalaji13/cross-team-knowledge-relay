@@ -22,8 +22,7 @@ type Bounty = {
   matchedExperts: MatchedExpert[];
 };
 
-const DEFAULT_API_URL = "https://cross-team-knowledge-relay.onrender.com";
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_URL).replace(/\/$/, "");
+const API_URL = "/api/bounties";
 
 export default function Home() {
   const [title, setTitle] = useState("");
@@ -65,6 +64,15 @@ export default function Home() {
 
   useEffect(() => {
     loadBounties();
+    const events = new EventSource("/api/bounties/stream");
+    events.onopen = () => setConnected(true);
+    events.addEventListener("bounty.created", (event) => {
+      const bounty = JSON.parse((event as MessageEvent).data) as Bounty;
+      setBounties((current) => [bounty, ...current.filter((item) => item.id !== bounty.id)]);
+      setStatus("Live update received from the bounty service.");
+    });
+    events.onerror = () => setConnected(false);
+    return () => events.close();
   }, []);
 
   async function submitBounty(event: FormEvent<HTMLFormElement>) {
@@ -115,7 +123,7 @@ export default function Home() {
         <MetricCard label="Open bounties" value={String(bounties.length)} />
         <MetricCard label="Total reward value" value={`$${totalOpenValue}`} />
         <MetricCard label="Cross-team matches" value={String(totalMatches)} />
-        <MetricCard label="Backend URL" value={API_URL} />
+        <MetricCard label="Bounty API route" value={API_URL} />
       </section>
 
       <section className="grid flex-1 gap-8 md:grid-cols-[1.2fr_1fr]">
