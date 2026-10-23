@@ -4,13 +4,14 @@ import { SESSION_COOKIE, signSession } from "@/lib/auth";
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
+  const site = process.env.PUBLIC_SITE_URL || request.nextUrl.origin;
   const code = request.nextUrl.searchParams.get("code");
   const state = request.nextUrl.searchParams.get("state");
   const savedState = request.cookies.get("relay_oauth_state")?.value;
   const clientId = process.env.GITHUB_CLIENT_ID;
   const clientSecret = process.env.GITHUB_CLIENT_SECRET;
   if (!code || !state || !savedState || state !== savedState || !clientId || !clientSecret) {
-    return NextResponse.redirect(new URL("/?auth=failed", request.nextUrl.origin));
+    return NextResponse.redirect(new URL("/?auth=failed", site));
   }
 
   try {
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
       avatarUrl: user.avatar_url || "",
       expiresAt: now + 12 * 60 * 60 * 1000,
     });
-    const response = NextResponse.redirect(new URL("/", request.nextUrl.origin));
+    const response = NextResponse.redirect(new URL("/", site));
     response.cookies.set(SESSION_COOKIE, session, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -50,6 +51,6 @@ export async function GET(request: NextRequest) {
     response.cookies.set("relay_oauth_state", "", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/api/auth/callback", maxAge: 0 });
     return response;
   } catch {
-    return NextResponse.redirect(new URL("/?auth=failed", request.nextUrl.origin));
+    return NextResponse.redirect(new URL("/?auth=failed", site));
   }
 }
