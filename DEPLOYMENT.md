@@ -1,69 +1,53 @@
-# 🚀 Easy Deployment Guide: Vercel (Frontend) & Render (Backend)
+# Deployment guide
 
-Because this is a "monorepo" (both frontend and backend folders are in the same GitHub repository), you need to tell Vercel and Render which folder to look at. Here is the foolproof, step-by-step guide to deploying without errors
+The app is deployed as a Go API plus managed PostgreSQL, with a Next.js frontend. Use separate development and production GitHub OAuth apps. This repository is ready for a **staged public preview**; complete the final checklist before promoting it as a production service.
 
----
+## 1. Backend and PostgreSQL
 
-## Part 1: Prerequisites
-1. **GitHub Repository**: Push your entire `cross-team-match` folder to a GitHub repository.
-2. **Databases (Free Tier)**:
-   - **PostgreSQL**: Create a free database on [Render](https://dashboard.render.com).
-   - **Redis**: Create a free Redis instance on [Upstash](https://upstash.com).
-   - **Neo4j**: Create a free AuraDB instance on [Neo4j Aura](https://console.neo4j.io/).
+Deploy the `backend` directory using `backend/Dockerfile`. Attach a managed PostgreSQL database and set:
 
----
+- `DATABASE_URL`: private PostgreSQL connection string.
+- `API_BEARER_TOKEN`: a high-entropy secret shared only with the Next.js server environment.
+- `ALLOWED_ORIGINS`: exact frontend origin, such as `https://relay.example.com`.
+- `PORT`: use the port assigned by the host, commonly provided automatically.
 
-## Part 2: Deploying the Go Backend on Render
+The API checks database readiness at startup and creates the initial table and indexes. For multiple replicas and zero-downtime schema changes, replace startup DDL with versioned migrations before launch.
 
-Render is perfect for Go applications because it automatically detects Go code and builds it.
+## 2. GitHub OAuth app
 
-### Steps:
-1. Go to [Render Dashboard](https://dashboard.render.com/).
-2. Click **New +** and select **Web Service**.
-3. Connect your GitHub account and select your repository.
-4. Fill in the deployment settings:
-   - **Name**: `cross-team-match-api` (or whatever you prefer)
-   - **Root Directory**: `backend` *(⚠️ CRITICAL: If you leave this blank, the build will fail!)*
-   - **Environment**: `Go`
-   - **Build Command**: `go build -o server ./cmd/server/main.go`
-   - **Start Command**: `./server`
-5. Scroll down to **Advanced** -> **Environment Variables** and add your Database URLs:
-   - `PORT` = `8080`
-   - `NEO4J_URI` = `bolt://...` (From Neo4j Aura)
-   - `NEO4J_AUTH` = `neo4j/your_password`
-   - `REDIS_URL` = `redis://...` (From Upstash)
-   - `POSTGRES_URL` = `postgres://...` (From Render Postgres)
-6. Click **Create Web Service**.
+Create a GitHub OAuth app for the deployment. Set its authorization callback URL to:
 
-> 🎉 **Result**: Render will build your Go backend and give you an API URL like: `https://cross-team-match-api.onrender.com`. Copy this URL for the frontend!
+```
+https://YOUR_FRONTEND_HOST/api/auth/callback
+```
 
----
+The callback must match exactly. Set the following variables on the Next.js host:
 
-## Part 3: Deploying the Next.js Frontend on Vercel
+- `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` from the OAuth app.
+- `GITHUB_ALLOWED_USERS`: comma-separated GitHub logins allowed to post, such as `rahulbalaji13`. Set this for a controlled preview; if omitted, any GitHub user who signs in can post.
+- `SESSION_SECRET`: at least 32 random characters; generate a fresh value and keep it private.
+- `PUBLIC_SITE_URL`: canonical HTTPS frontend origin, with no trailing slash.
+- `RELAY_API_URL`: backend HTTPS origin, with no trailing slash.
+- `RELAY_API_TOKEN`: same value as backend `API_BEARER_TOKEN`.
 
-Vercel is the creator of Next.js, so deployment is almost entirely automated.
+Keep OAuth and API secrets in the hosting provider’s secret manager. Never commit them or use a `NEXT_PUBLIC_*` prefix.
 
-### Steps:
-1. Go to [Vercel](https://vercel.com/) and click **Add New** -> **Project**.
-2. Import your GitHub repository.
-3. In the "Configure Project" screen, look for **Root Directory**.
-4. Click **Edit**, select the `frontend` folder, and save. *(⚠️ CRITICAL: Vercel must know the app is inside this folder!)*
-5. Vercel will auto-detect "Next.js" as the Framework Preset. Leave the build commands as default.
-6. Open the **Environment Variables** section and add:
-   - `NEXT_PUBLIC_WS_URL` = `https://cross-team-match-api.onrender.com` (Paste the URL Render gave you in Part 2).
-7. Click **Deploy**.
+## 3. Local setup
 
-> 🎉 **Result**: Vercel will install your React packages, build your Next.js frontend, and give you a live HTTPS URL in under 2 minutes.
+```sh
+docker compose up --build
+```
 
----
+Copy `frontend/.env.example` to `frontend/.env.local`. Use a development OAuth app with callback `http://localhost:3000/api/auth/callback`, set the local API token to match `docker-compose.yml`, and provide a random `SESSION_SECRET`. From `frontend`, run `npm ci && npm run dev`.
 
-## 🛠️ Common Errors & How to Avoid Them
+## 4. Public-launch work still required
 
-1. ❌ **"go: go.mod file not found in current directory" (Render)**
-   - **Fix**: You forgot to set the `Root Directory` to `backend` in Render. Your `go.mod` is inside the `backend` folder, not the main repo folder.
+- Restrict sign-in to the intended organization or add moderation and abuse reporting. At present any GitHub account can post.
+- Put distributed rate limiting and bot protection at a managed edge/WAF; the Go limiter is in-memory and per instance.
+- Add versioned database migrations, backups, restore drills, and a retention policy.
+- Add CI build/type/lint checks and PostgreSQL integration tests.
+- Add structured logs, metrics, alerts, and operational runbooks.
+- Decide data ownership/privacy rules before replacing the synthetic expert profiles with real employee data.
+- Do not enable real payments without a separately designed and reviewed payment/escrow system.
 
-2. ❌ **"Could not find a valid build in the '.next' directory" (Vercel)**
-   - **Fix**: You forgot to set the `Root Directory` to `frontend` in Vercel.
-
-3. ❌ **Frontend gets "Network Error" trying to reach the API**
-   - **Fix**: Ensure your `NEXT_PUBLIC_WS_URL` on Vercel starts with `https://` and does **not** have a trailing slash (`/`).
+The app should be treated as a staged preview until these items are addressed. No live deployment is created by these repository changes.

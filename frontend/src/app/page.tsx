@@ -22,8 +22,7 @@ type Bounty = {
   matchedExperts: MatchedExpert[];
 };
 
-const DEFAULT_API_URL = "https://cross-team-knowledge-relay.onrender.com";
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_URL).replace(/\/$/, "");
+const API_URL = "/api/bounties";
 
 export default function Home() {
   const [title, setTitle] = useState("");
@@ -35,6 +34,7 @@ export default function Home() {
   const [bounties, setBounties] = useState<Bounty[]>([]);
   const [status, setStatus] = useState("Checking backend connection...");
   const [connected, setConnected] = useState(false);
+  const [user, setUser] = useState<{ login: string; name: string } | null>(null);
   const currentYear = new Date().getFullYear();
 
   const totalOpenValue = useMemo(
@@ -65,6 +65,16 @@ export default function Home() {
 
   useEffect(() => {
     loadBounties();
+    void fetch("/api/auth/session", { cache: "no-store" }).then((response) => response.json()).then((data) => setUser(data.user));
+    const events = new EventSource("/api/bounties/stream");
+    events.onopen = () => setConnected(true);
+    events.addEventListener("bounty.created", (event) => {
+      const bounty = JSON.parse((event as MessageEvent).data) as Bounty;
+      setBounties((current) => [bounty, ...current.filter((item) => item.id !== bounty.id)]);
+      setStatus("Live update received from the bounty service.");
+    });
+    events.onerror = () => setConnected(false);
+    return () => events.close();
   }, []);
 
   async function submitBounty(event: FormEvent<HTMLFormElement>) {
@@ -109,13 +119,16 @@ export default function Home() {
           Post technical blockers and get ranked experts outside your own team.
         </p>
         <p className={`mt-4 text-sm font-medium ${connected ? "text-green-600" : "text-amber-600"}`}>{status}</p>
+        <div className="mt-3 flex items-center gap-3 text-sm">
+          {user ? <><span>Signed in as {user.name} (@{user.login})</span><button type="button" className="underline" onClick={async () => { await fetch("/api/auth/session", { method: "POST" }); setUser(null); }}>Sign out</button></> : <a className="underline" href="/api/auth/login">Sign in with GitHub to post a bounty</a>}
+        </div>
       </header>
 
       <section className="mb-8 grid gap-4 md:grid-cols-4">
         <MetricCard label="Open bounties" value={String(bounties.length)} />
         <MetricCard label="Total reward value" value={`$${totalOpenValue}`} />
         <MetricCard label="Cross-team matches" value={String(totalMatches)} />
-        <MetricCard label="Backend URL" value={API_URL} />
+        <MetricCard label="Bounty API route" value={API_URL} />
       </section>
 
       <section className="grid flex-1 gap-8 md:grid-cols-[1.2fr_1fr]">
@@ -188,7 +201,7 @@ export default function Home() {
               <input type="number" min={60} required value={ttlSeconds} onChange={(e) => setTtlSeconds(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-black/15 bg-transparent px-3 py-2" />
             </label>
           </div>
-          <button className="w-full rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white dark:bg-white dark:text-black">Submit bounty</button>
+          <button disabled={!user} className="w-full rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-black">Submit bounty</button>
         </form>
       </section>
 
