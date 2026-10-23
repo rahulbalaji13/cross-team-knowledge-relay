@@ -23,6 +23,8 @@ jobs:
       - name: Build Go services
         working-directory: backend
         run: go build ./...
+      - name: Build backend container
+        run: docker build -t cross-team-knowledge-relay-api ./backend
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
