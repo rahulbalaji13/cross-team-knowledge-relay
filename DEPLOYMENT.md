@@ -24,6 +24,7 @@ https://YOUR_FRONTEND_HOST/api/auth/callback
 The callback must match exactly. Set the following variables on the Next.js host:
 
 - `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` from the OAuth app.
+- `GITHUB_ALLOWED_USERS`: comma-separated GitHub logins allowed to post, such as `rahulbalaji13`. Set this for a controlled preview; if omitted, any GitHub user who signs in can post.
 - `SESSION_SECRET`: at least 32 random characters; generate a fresh value and keep it private.
 - `PUBLIC_SITE_URL`: canonical HTTPS frontend origin, with no trailing slash.
 - `RELAY_API_URL`: backend HTTPS origin, with no trailing slash.
