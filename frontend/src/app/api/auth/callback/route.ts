@@ -32,6 +32,10 @@ export async function GET(request: NextRequest) {
     });
     const user = (await userResponse.json()) as { login?: string; name?: string | null; avatar_url?: string };
     if (!userResponse.ok || !user.login) throw new Error("Could not read GitHub identity");
+    const allowedUsers = process.env.GITHUB_ALLOWED_USERS?.split(",").map((value) => value.trim().toLowerCase()).filter(Boolean) || [];
+    if (allowedUsers.length && !allowedUsers.includes(user.login.toLowerCase())) {
+      return NextResponse.redirect(new URL("/?auth=not-allowed", site));
+    }
 
     const now = Date.now();
     const session = signSession({
