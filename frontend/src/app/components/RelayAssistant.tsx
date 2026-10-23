@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type ChatMessage = {
   id: string;
@@ -77,8 +77,7 @@ export default function RelayAssistant() {
     if (isOpen) endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [isOpen, messages]);
 
-  function sendMessage(event: FormEvent<HTMLFormElement>, prompt = input) {
-    event.preventDefault();
+  function sendMessage(prompt = input) {
     const question = prompt.trim();
     if (!question) return;
 
@@ -90,11 +89,6 @@ export default function RelayAssistant() {
       { id: messageId + "-assistant", role: "assistant", ...answer },
     ]);
     setInput("");
-  }
-
-  function askQuickQuestion(question: string) {
-    const syntheticEvent = { preventDefault() {} } as FormEvent<HTMLFormElement>;
-    sendMessage(syntheticEvent, question);
   }
 
   return (
@@ -129,7 +123,7 @@ export default function RelayAssistant() {
               {messages.length === 1 && (
                 <div className="flex flex-col items-start gap-2 pt-1">
                   {quickQuestions.map((question) => (
-                    <button key={question} type="button" onClick={() => askQuickQuestion(question)} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-left text-xs font-semibold text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                    <button key={question} type="button" onClick={() => sendMessage(question)} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-left text-xs font-semibold text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
                       {question}
                     </button>
                   ))}
@@ -139,7 +133,7 @@ export default function RelayAssistant() {
             </div>
           </div>
 
-          <form onSubmit={sendMessage} className="flex shrink-0 items-center gap-2 border-t border-slate-200 bg-white p-3">
+          <form onSubmit={(event) => { event.preventDefault(); sendMessage(); }} className="flex shrink-0 items-center gap-2 border-t border-slate-200 bg-white p-3">
             <label htmlFor="relay-chat-input" className="sr-only">Ask the Relay guide a question</label>
             <input id="relay-chat-input" ref={inputRef} value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask a question…" maxLength={300} className="min-h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-100" />
             <button type="submit" disabled={!input.trim()} aria-label="Send message" className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"><SendIcon /></button>
