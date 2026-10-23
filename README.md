@@ -1,161 +1,40 @@
-# 🚀 System Design: Cross-Team Knowledge Relay Platform
-**Target Audience**: Meta E5 / Google L5 / Amazon Bar Raiser
-**Role**: Staff-level Engineer / Distributed Systems Architect
+# Cross-Team Knowledge Relay
 
-## 1. High-Level Architecture Diagram
+A prototype for posting engineering help requests and surfacing relevant experts from other teams. The current application is a small, deployable demo: a Next.js UI, a Go API, PostgreSQL persistence for bounties, and Server-Sent Events (SSE) for live feed updates.
 
-```mermaid
-graph TD
-    subgraph Frontend [Next.js App Router]
-        UI[Web UI] --> Auth[GitHub OAuth]
-        UI --> API_Client[REST/GraphQL Client]
-        UI --> WS_Client[Socket.io Client]
-    end
+## What runs today
 
-    subgraph Load Balancing & API Gateway
-        LB[AWS ALB / Nginx] --> RateLimiter[Redis Rate Limiter]
-        RateLimiter --> Gateway[API Gateway - Go/Gin]
-    end
+- Create and list help requests (called bounties in the UI).
+- Persist requests in PostgreSQL; the API creates the required table and indexes at startup.
+- Suggest up to three matches from five seeded demo experts using skill overlap, skill recency, and reputation.
+- Stream newly created requests to connected browsers over SSE.
+- Keep the API bearer token on the Next.js server; the browser calls same-origin Next.js routes.
 
-    subgraph Backend Services [Go Microservices]
-        Gateway --> BountySvc[Bounty Service]
-        Gateway --> MatchSvc[Graph Matching Service]
-        Gateway --> EscrowSvc[Escrow State Machine]
-        Gateway --> NotifySvc[Notification Service]
-        
-        WS_Client --> NotifySvc
-    end
+## Current limits
 
-    subgraph Data Layer
-        MatchSvc --> Neo4j[(Neo4j Graph DB)]
-        BountySvc --> Postgres[(PostgreSQL)]
-        EscrowSvc --> Postgres
-        NotifySvc --> Redis[(Redis Pub/Sub)]
-        BountySvc --> RedisCache[(Redis Cache)]
-    end
+This is a portfolio prototype, not a production employee directory or payment product. Expert profiles are hard-coded demo data. Matching runs in the API process. The API has a simple per-process rate limiter; it is not a distributed limiter. OAuth/user identity, tenant authorization, abuse controls, operational dashboards, and automated integration tests still need to be added before unrestricted public use. There are no real payments; the displayed amount is illustrative.
 
-    subgraph External
-        UI --> Calendly[Calendly Embed]
-    end
+Architecture diagrams and the older interview guide include proposed components such as Neo4j, Redis, Kafka, and escrow. Those are design ideas and are not part of the running request path.
+
+## Local development
+
+Requirements: Docker Compose.
+
+```sh
+docker compose up --build
 ```
 
-## 2. Graph Modeling & Database Schema Strategy
+The API is available at `http://localhost:8080`. To run the frontend, set `RELAY_API_URL=http://localhost:8080` and `RELAY_API_TOKEN=local-only-change-this-token` in `frontend/.env.local`, then run `npm ci && npm run dev` from `frontend`. The API creates its table on startup.
 
-While Neo4j handles the knowledge graph and matching, a relational DB (PostgreSQL) is used for transactional consistency (Escrow, Financials).
+## API
 
-### Relational Schema (PostgreSQL)
-- **Users**: `id`, `github_id`, `name`, `reputation_score`, `created_at`
-- **Bounties**: `id`, `poster_id`, `status` (OPEN, ACCEPTED, RESOLVED, EXPIRED), `amount`, `expires_at`, `created_at`
-- **Escrow**: `id`, `bounty_id`, `expert_id`, `status` (HELD, RELEASED, REFUNDED), `updated_at`
+- `GET /api/v1/health` — liveness/readiness check including database connectivity.
+- `GET /api/v1/bounties` — latest unexpired requests (maximum 100).
+- `POST /api/v1/bounties` — create a request; requires `Authorization: Bearer <API_BEARER_TOKEN>`.
+- `GET /api/v1/events` — SSE stream of newly created requests.
 
-### Graph Model (Neo4j)
-**Nodes**:
-- `(:Engineer {id, name, reputation})`
-- `(:Skill {name, category})`
-- `(:Team {name, domain})`
-- `(:Bounty {id, amount, timestamp})`
+The public web UI uses same-origin server routes under `/api/bounties`; do not put the backend bearer token in a `NEXT_PUBLIC_*` variable.
 
-**Relationships**:
-- `(Engineer)-[:HAS_SKILL {level: 1-5, last_used: timestamp}]->(Skill)`
-- `(Engineer)-[:BELONGS_TO]->(Team)`
-- `(Bounty)-[:REQUIRES {weight: 1.0}]->(Skill)`
-- `(Engineer)-[:SOLVED {rating: 1-5, date: timestamp}]->(Bounty)`
-- `(Engineer)-[:COLLABORATED_WITH {count: X}]->(Engineer)`
+## Deployment
 
-## 3. The Matching Algorithm: PageRank + Recency
-
-Matching isn't just "who has the skill." It's "who is the central authority on this skill, who has been active recently, and who is outside the poster's immediate team."
-
-**Algorithm Steps**:
-1. **Skill Proximity**: Find experts `E` connected to the bounty's required skills.
-2. **Centrality Scoring**: Apply a personalized PageRank algorithm over the `[:SOLVED]` and `[:COLLABORATED_WITH]` edges to find authorities.
-3. **Decay/Recency Weighting**: Multiply the score by a time-decay factor `e^(-λt)` where `t` is the time since they last used/solved this skill.
-4. **Islands**: Heavily penalize matches within the exact same `(:Team)` to encourage cross-team pollination.
-
-## 4. Escrow State Machine
-
-Escrow requires idempotency and strict transitions to prevent double-payouts.
-
-**States**: `CREATED` -> `HELD` -> `MEETING_CONFIRMED` -> `RELEASED` | `REFUNDED`
-
-**Transitions**:
-1. Bounty Posted -> `CREATED`
-2. Expert Accepts -> Move funds to `HELD` (Atomic DB transaction).
-3. Calendly Webhook -> `MEETING_CONFIRMED`
-4. Poster hits "Resolved" -> `RELEASED`
-5. TTL Expiry / Poster "Unresolved" -> `REFUNDED`
-
-*Idempotency*: Every transition requires an `Idempotency-Key` in the API header, stored in Redis for 24h.
-
-## 5. Scaling Strategy (10K -> 1M Engineers)
-
-**Horizontal Scalability**: Go/Gin microservices are stateless. Scale compute horizontally behind ALB.
-**Graph DB Scaling**: Neo4j read replicas for the heavy matching queries; single leader for writes (profile updates/bounty creation).
-**Event-Driven Matching**: 
-When a bounty is created, we don't block the HTTP request to compute matches.
-- API drops a `BountyCreated` event into an **Apache Kafka** or **Redis Streams** topic.
-- A worker consumes the event, runs the Cypher query, and pushes targeted matches via Redis Pub/Sub.
-- WebSocket cluster fans out notifications to matched engineers in real-time.
-
-**Failure Handling**:
-- *Circuit Breakers (e.g., heavily loading Neo4j)*: If Neo4j latency spikes > 500ms, fallback to a cached Redis index (inverted index of skills -> experts).
-- *Backpressure*: If WS clients slow down, drop non-critical "bounty update" packets; ensure reliable delivery only for "bounty matched to YOU" packets.
-
-## 6. Directory Structure
-
-```text
-/backend
-├── cmd/
-│   └── server/main.go
-├── internal/
-│   ├── api/
-│   │   ├── handlers/bounty.go
-│   │   └── middleware/auth.go
-│   ├── domain/
-│   │   ├── models/bounty.go
-│   │   └── state/escrow.go
-│   ├── infrastructure/
-│   │   ├── neo4j/graph_repo.go
-│   │   ├── postgres/relational_repo.go
-│   │   └── redis/pubsub.go
-│   └── service/
-│       ├── matcher.go
-│       └── checkout.go
-├── pkg/
-│   └── logger/
-└── docker-compose.yml
-
-/frontend
-├── app/
-├── components/
-├── hooks/
-│   └── useBountyStream.ts
-└── package.json
-```
-
-## 7. API Contracts (Sample)
-
-**POST /api/v1/bounties**
-```json
-{
-  "title": "Need help debugging Kafka offset lag",
-  "description": "...",
-  "skills": ["Kafka", "Go", "Distributed Systems"],
-  "bounty_amount": 150,
-  "ttl_seconds": 3600
-}
-```
-*Response*: `202 Accepted` (Matching triggered async)
-
-**POST /api/v1/escrow/{id}/release**
-*Headers*: `X-Idempotency-Key: uuid`
-*Response*: `200 OK`
-
-## 8. Resume Optimization Layer
-
-*How you should describe this project on your Senior/Staff resume:*
-
-- **Distributed Systems & Scale**: "Architected an event-driven Knowledge Relay Platform for 10K+ engineers. Decoupled matching logic using Pub/Sub and WebSocket fan-outs, supporting bursting loads without degrading core API latency."
-- **Graph Processing**: "Implemented a skills-based matching engine using Neo4j and Cypher. Engineered a custom personalized PageRank algorithm with time-decay heuristics to surface top-tier domain experts across organizational silos."
-- **State Machine & Financials**: "Designed a robust, double-entry Escrow state machine in Go/PostgreSQL. Enforced strict idempotency and optimistic concurrency controls to guarantee 0% race-condition anomalies during payout transitions."
-- **Architecture Leadership (Staff Level)**: "Drove architectural decisions mapping polyglot persistence to domain needs: Neo4j for deep relationship traversals, Postgres for ACID transaction boundaries, and Redis for distributed rate-limiting and session state."
+See [DEPLOYMENT.md](DEPLOYMENT.md). Keep the site read-only or behind an identity-aware access layer until user authentication and abuse controls are configured.
