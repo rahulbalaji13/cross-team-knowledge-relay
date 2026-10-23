@@ -39,6 +39,7 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [submitState, setSubmitState] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [submitMessage, setSubmitMessage] = useState("");
+  const [theme, setTheme] = useState<"light" | "dark">("light");
 
   const openBounties = useMemo(
     () => bounties.filter((item) => item.status.toLowerCase() === "open"),
@@ -76,8 +77,21 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    const savedTheme = window.localStorage.getItem("relay-theme");
+    const initialTheme = savedTheme === "light" || savedTheme === "dark"
+      ? savedTheme
+      : window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.dataset.theme = initialTheme;
+    setTheme(initialTheme);
     void loadBounties();
   }, [loadBounties]);
+
+  function toggleTheme() {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = nextTheme;
+    window.localStorage.setItem("relay-theme", nextTheme);
+    setTheme(nextTheme);
+  }
 
   async function submitBounty(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -133,6 +147,10 @@ export default function Home() {
             <a href="#create" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:px-4">
               <span className="text-lg leading-none" aria-hidden="true">+</span><span>Ask for help</span>
             </a>
+            <button type="button" onClick={toggleTheme} aria-pressed={theme === "dark"} aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+              <ThemeIcon theme={theme} />
+              <span>{theme === "dark" ? "Light" : "Dark"}</span>
+            </button>
           </nav>
         </div>
       </header>
@@ -311,6 +329,19 @@ function BountyCard({ bounty }: { bounty: Bounty }) {
       ) : <p className="mt-2 text-sm text-slate-500">No teammates matched yet. Try adding more skills to a request.</p>}
     </div>
   </article>;
+}
+
+function ThemeIcon({ theme }: { theme: "light" | "dark" }) {
+  return theme === "dark" ? (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-4">
+      <circle cx="12" cy="12" r="3.5" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M12 2.5v2m0 15v2M4.7 4.7l1.4 1.4m11.8 11.8 1.4 1.4M2.5 12h2m15 0h2M4.7 19.3l1.4-1.4M17.9 6.1l1.4-1.4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-4">
+      <path d="M20.2 15.1A8.5 8.5 0 0 1 8.9 3.8 8.6 8.6 0 1 0 20.2 15.1Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+    </svg>
+  );
 }
 
 function RelayMark() {
