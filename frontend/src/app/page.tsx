@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import RelayAssistant from "./components/RelayAssistant";
 
 type MatchedExpert = {
   expert_id: string;
@@ -274,6 +275,7 @@ export default function Home() {
           <p>Share knowledge. Unblock work. Move together.</p>
         </footer>
       </div>
+      <RelayAssistant />
     </main>
   );
 }
