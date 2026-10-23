@@ -307,10 +307,10 @@ function appendVoiceTranscript(current: string, transcript: string) {
 }
 
 function appendSkillTranscript(current: string, transcript: string) {
-  const spoken = transcript.trim().replace(/\\s+(?:and|comma)\\s+/gi, ", ");
+  const spoken = transcript.trim().replace(/\s+(?:and|comma)\s+/gi, ", ");
   if (!spoken) return current;
-  const existing = current.trim().replace(/[，,\\s]+$/, "");
-  return existing ? existing + ", " + spoken.replace(/^[，,\\s]+/, "") : spoken;
+  const existing = current.trim().replace(/[，,\s]+$/, "");
+  return existing ? existing + ", " + spoken.replace(/^[，,\s]+/, "") : spoken;
 }
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
