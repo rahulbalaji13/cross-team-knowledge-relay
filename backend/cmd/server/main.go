@@ -30,6 +30,7 @@ type createBountyRequest struct {
 	BountyAmount int `json:"bounty_amount"`
 	TTLSeconds int `json:"ttl_seconds"`
 	PosterTeam string `json:"poster_team"`
+	CreatedBy string `json:"created_by"`
 }
 type expert struct {
 	ID string `json:"id"`
@@ -55,6 +56,7 @@ type bountyResponse struct {
 	ExpiresAt string `json:"expiresAt"`
 	Status string `json:"status"`
 	PosterTeam string `json:"posterTeam"`
+	CreatedBy string `json:"createdBy"`
 	MatchedExperts []matchedExpert `json:"matchedExperts"`
 	CreatedAt time.Time `json:"-"`
 }
@@ -114,9 +116,11 @@ const schema = `CREATE TABLE IF NOT EXISTS bounties (
  expires_at TIMESTAMPTZ NOT NULL,
  status TEXT NOT NULL DEFAULT 'OPEN',
  poster_team TEXT NOT NULL,
+ created_by TEXT NOT NULL DEFAULT 'demo',
  matched_experts JSONB NOT NULL DEFAULT '[]'::jsonb,
  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE bounties ADD COLUMN IF NOT EXISTS created_by TEXT NOT NULL DEFAULT 'demo';
 CREATE INDEX IF NOT EXISTS bounties_created_at_idx ON bounties (created_at DESC);
 CREATE INDEX IF NOT EXISTS bounties_expires_at_idx ON bounties (expires_at);`
 
@@ -151,7 +155,7 @@ func (a *app) health(w http.ResponseWriter,r *http.Request) {
 func (a *app) bounties(w http.ResponseWriter,r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		rows,err:=a.db.QueryContext(r.Context(),`SELECT id,title,description,skills,amount,expires_at,status,poster_team,matched_experts,created_at FROM bounties WHERE expires_at > now() ORDER BY created_at DESC LIMIT 100`)
+		rows,err:=a.db.QueryContext(r.Context(),`SELECT id,title,description,skills,amount,expires_at,status,poster_team,created_by,matched_experts,created_at FROM bounties WHERE expires_at > now() ORDER BY created_at DESC LIMIT 100`)
 		if err!=nil { writeJSON(w,http.StatusInternalServerError,map[string]string{"error":"could not load bounties"}); return }; defer rows.Close()
 		items:=make([]bountyResponse,0)
 		for rows.Next() { item,err:=scanBounty(rows); if err!=nil { writeJSON(w,http.StatusInternalServerError,map[string]string{"error":"could not read bounties"}); return }; items=append(items,item) }
@@ -170,21 +174,22 @@ func (a *app) bounties(w http.ResponseWriter,r *http.Request) {
 			writeJSON(w,http.StatusBadRequest,map[string]string{"error":"title (3-200 chars), description (max 4000), 1-20 skills, amount (1-100000), and TTL (60-2592000 seconds) are required"}); return
 		}
 		if req.PosterTeam=="" { req.PosterTeam="Unknown" }
+		if req.CreatedBy=="" { writeJSON(w,http.StatusBadRequest,map[string]string{"error":"authenticated user is required"}); return }
 		for _,skill:=range skills { if len(skill)>80 { writeJSON(w,http.StatusBadRequest,map[string]string{"error":"skill names must be 80 characters or fewer"}); return } }
 		matches:=computeMatches(skills,req.PosterTeam)
 		id,err:=newID(); if err!=nil { writeJSON(w,http.StatusInternalServerError,map[string]string{"error":"could not create bounty"}); return }
 		now:=time.Now().UTC(); expires:=now.Add(time.Duration(req.TTLSeconds)*time.Second)
 		skillsJSON,_:=json.Marshal(skills); matchesJSON,_:=json.Marshal(matches)
-		_,err=a.db.ExecContext(r.Context(),`INSERT INTO bounties(id,title,description,skills,amount,expires_at,status,poster_team,matched_experts,created_at) VALUES($1,$2,$3,$4,$5,$6,'OPEN',$7,$8,$9)`,id,req.Title,req.Description,skillsJSON,req.BountyAmount,expires,req.PosterTeam,matchesJSON,now)
+		_,err=a.db.ExecContext(r.Context(),`INSERT INTO bounties(id,title,description,skills,amount,expires_at,status,poster_team,created_by,matched_experts,created_at) VALUES($1,$2,$3,$4,$5,$6,'OPEN',$7,$8,$9,$10)`,id,req.Title,req.Description,skillsJSON,req.BountyAmount,expires,req.PosterTeam,req.CreatedBy,matchesJSON,now)
 		if err!=nil { log.Printf("insert bounty: %v",err); writeJSON(w,http.StatusInternalServerError,map[string]string{"error":"could not save bounty"}); return }
-		writeJSON(w,http.StatusCreated,map[string]any{"status":"created","bounty":bountyResponse{ID:id,Title:req.Title,Description:req.Description,Skills:skills,Amount:req.BountyAmount,ExpiresAt:expires.Format(time.RFC3339),Status:"OPEN",PosterTeam:req.PosterTeam,MatchedExperts:matches,CreatedAt:now}})
+		writeJSON(w,http.StatusCreated,map[string]any{"status":"created","bounty":bountyResponse{ID:id,Title:req.Title,Description:req.Description,Skills:skills,Amount:req.BountyAmount,ExpiresAt:expires.Format(time.RFC3339),Status:"OPEN",PosterTeam:req.PosterTeam,CreatedBy:req.CreatedBy,MatchedExperts:matches,CreatedAt:now}})
 	default: writeJSON(w,http.StatusMethodNotAllowed,map[string]string{"error":"method not allowed"})
 	}
 }
 type scanner interface { Scan(...any) error }
 func scanBounty(row scanner) (bountyResponse,error) {
 	var b bountyResponse; var skills,matches []byte
-	err:=row.Scan(&b.ID,&b.Title,&b.Description,&skills,&b.Amount,&b.ExpiresAt,&b.Status,&b.PosterTeam,&matches,&b.CreatedAt)
+	err:=row.Scan(&b.ID,&b.Title,&b.Description,&skills,&b.Amount,&b.ExpiresAt,&b.Status,&b.PosterTeam,&b.CreatedBy,&matches,&b.CreatedAt)
 	if err!=nil { return b,err }; if err=json.Unmarshal(skills,&b.Skills); err!=nil { return b,err }; if err=json.Unmarshal(matches,&b.MatchedExperts); err!=nil { return b,err }
 	return b,nil
 }
