@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
 type MatchedExpert = {
   expert_id: string;
@@ -60,7 +60,7 @@ export default function Home() {
     );
   }, [openBounties, search]);
 
-  async function loadBounties() {
+  const loadBounties = useCallback(async () => {
     setLoadingFeed(true);
     try {
       const response = await fetch(API_URL + "/api/v1/bounties", { cache: "no-store" });
@@ -73,11 +73,11 @@ export default function Home() {
     } finally {
       setLoadingFeed(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void loadBounties();
-  }, []);
+  }, [loadBounties]);
 
   async function submitBounty(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -260,7 +260,7 @@ export default function Home() {
   );
 }
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return <label className="block text-sm font-semibold text-slate-800">
     <span className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5"><span>{label}</span>{hint ? <span className="text-xs font-normal text-slate-400">{hint}</span> : null}</span>
     <span className="mt-1.5 block">{children}</span>
