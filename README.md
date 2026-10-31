@@ -1,161 +1,104 @@
-# 🚀 System Design: Cross-Team Knowledge Relay Platform
-**Target Audience**: Meta E5 / Google L5 / Amazon Bar Raiser
-**Role**: Staff-level Engineer / Distributed Systems Architect
+# Cross-Team Knowledge Relay
 
-## 1. High-Level Architecture Diagram
+A portfolio prototype for routing engineering help requests to relevant experts outside the requester's team. The current implementation is a synchronous, end-to-end slice: the Go API validates a request, Neo4j ranks sample experts, PostgreSQL stores the request and its result, and Redis deduplicates retries.
 
-```mermaid
-graph TD
-    subgraph Frontend [Next.js App Router]
-        UI[Web UI] --> Auth[GitHub OAuth]
-        UI --> API_Client[REST/GraphQL Client]
-        UI --> WS_Client[Socket.io Client]
-    end
+## What is implemented
 
-    subgraph Load Balancing & API Gateway
-        LB[AWS ALB / Nginx] --> RateLimiter[Redis Rate Limiter]
-        RateLimiter --> Gateway[API Gateway - Go/Gin]
-    end
+- **API:** Go 1.22 and Gin, with request validation, CORS, and a health endpoint.
+- **Matching:** Neo4j Cypher matches required skills to engineer profiles, excludes the poster's team, and ranks candidates using skill level and activity recency.
+- **Persistence:** PostgreSQL stores bounties, matched experts, and durable idempotency records.
+- **Retry safety:** `X-Idempotency-Key` uses Redis `SET NX` with a 24-hour cache. A PostgreSQL transaction stores the request hash and response with the bounty, so a retry can recover the original result even if Redis loses its cache.
+- **Feed reads:** Redis caches the serialized feed for up to 30 seconds. A revision key invalidates prior entries after a new bounty is saved, and the cache lifetime is bounded by the next open bounty expiry.
+- **Synthetic graph data:** `backend/scripts/seed.go` deterministically creates 10,000 synthetic engineers, each with five skill relationships by default (50,000 relationships). This is a generator; it does not mean those records have already been loaded in a hosted database.
+- **Frontend:** Next.js form and feed call the API. The client keeps the same idempotency key when retrying a failed submission.
 
-    subgraph Backend Services [Go Microservices]
-        Gateway --> BountySvc[Bounty Service]
-        Gateway --> MatchSvc[Graph Matching Service]
-        Gateway --> EscrowSvc[Escrow State Machine]
-        Gateway --> NotifySvc[Notification Service]
-        
-        WS_Client --> NotifySvc
-    end
+## Request flow
 
-    subgraph Data Layer
-        MatchSvc --> Neo4j[(Neo4j Graph DB)]
-        BountySvc --> Postgres[(PostgreSQL)]
-        EscrowSvc --> Postgres
-        NotifySvc --> Redis[(Redis Pub/Sub)]
-        BountySvc --> RedisCache[(Redis Cache)]
-    end
+1. The browser sends a bounty payload and an idempotency key.
+2. The API validates and normalizes the payload, then claims the key in Redis.
+3. If this key already has a stored result, the API replays it. Reusing the key for a different payload returns `409 Conflict`.
+4. Neo4j returns up to three cross-team expert matches.
+5. In one PostgreSQL transaction, the API stores the bounty and the replayable idempotency result.
+6. The API caches the result in Redis and returns `201 Created`; repeated requests with the same key return the same bounty.
 
-    subgraph External
-        UI --> Calendly[Calendly Embed]
-    end
+PostgreSQL is the durable source of truth for both the bounty and request replay. Redis is the fast idempotency cache/coordination layer, not the only protection against duplicate writes.
+
+## Run locally
+
+Requirements: Docker Compose, Go 1.22+ (for local Go commands), and Node.js 20+.
+
+```powershell
+docker compose build backend
+docker compose up -d postgres redis neo4j
+docker compose run --rm --entrypoint /usr/local/bin/seed backend
+docker compose up -d backend
 ```
 
-## 2. Graph Modeling & Database Schema Strategy
+The seed command generates 10,000 synthetic profiles and 50,000 skill relationships. To use a smaller dataset, pass values such as `-e ENGINEER_COUNT=1000 -e SKILLS_PER_ENGINEER=5` to `docker compose run`.
 
-While Neo4j handles the knowledge graph and matching, a relational DB (PostgreSQL) is used for transactional consistency (Escrow, Financials).
+In another terminal:
 
-### Relational Schema (PostgreSQL)
-- **Users**: `id`, `github_id`, `name`, `reputation_score`, `created_at`
-- **Bounties**: `id`, `poster_id`, `status` (OPEN, ACCEPTED, RESOLVED, EXPIRED), `amount`, `expires_at`, `created_at`
-- **Escrow**: `id`, `bounty_id`, `expert_id`, `status` (HELD, RELEASED, REFUNDED), `updated_at`
-
-### Graph Model (Neo4j)
-**Nodes**:
-- `(:Engineer {id, name, reputation})`
-- `(:Skill {name, category})`
-- `(:Team {name, domain})`
-- `(:Bounty {id, amount, timestamp})`
-
-**Relationships**:
-- `(Engineer)-[:HAS_SKILL {level: 1-5, last_used: timestamp}]->(Skill)`
-- `(Engineer)-[:BELONGS_TO]->(Team)`
-- `(Bounty)-[:REQUIRES {weight: 1.0}]->(Skill)`
-- `(Engineer)-[:SOLVED {rating: 1-5, date: timestamp}]->(Bounty)`
-- `(Engineer)-[:COLLABORATED_WITH {count: X}]->(Engineer)`
-
-## 3. The Matching Algorithm: PageRank + Recency
-
-Matching isn't just "who has the skill." It's "who is the central authority on this skill, who has been active recently, and who is outside the poster's immediate team."
-
-**Algorithm Steps**:
-1. **Skill Proximity**: Find experts `E` connected to the bounty's required skills.
-2. **Centrality Scoring**: Apply a personalized PageRank algorithm over the `[:SOLVED]` and `[:COLLABORATED_WITH]` edges to find authorities.
-3. **Decay/Recency Weighting**: Multiply the score by a time-decay factor `e^(-λt)` where `t` is the time since they last used/solved this skill.
-4. **Islands**: Heavily penalize matches within the exact same `(:Team)` to encourage cross-team pollination.
-
-## 4. Escrow State Machine
-
-Escrow requires idempotency and strict transitions to prevent double-payouts.
-
-**States**: `CREATED` -> `HELD` -> `MEETING_CONFIRMED` -> `RELEASED` | `REFUNDED`
-
-**Transitions**:
-1. Bounty Posted -> `CREATED`
-2. Expert Accepts -> Move funds to `HELD` (Atomic DB transaction).
-3. Calendly Webhook -> `MEETING_CONFIRMED`
-4. Poster hits "Resolved" -> `RELEASED`
-5. TTL Expiry / Poster "Unresolved" -> `REFUNDED`
-
-*Idempotency*: Every transition requires an `Idempotency-Key` in the API header, stored in Redis for 24h.
-
-## 5. Scaling Strategy (10K -> 1M Engineers)
-
-**Horizontal Scalability**: Go/Gin microservices are stateless. Scale compute horizontally behind ALB.
-**Graph DB Scaling**: Neo4j read replicas for the heavy matching queries; single leader for writes (profile updates/bounty creation).
-**Event-Driven Matching**: 
-When a bounty is created, we don't block the HTTP request to compute matches.
-- API drops a `BountyCreated` event into an **Apache Kafka** or **Redis Streams** topic.
-- A worker consumes the event, runs the Cypher query, and pushes targeted matches via Redis Pub/Sub.
-- WebSocket cluster fans out notifications to matched engineers in real-time.
-
-**Failure Handling**:
-- *Circuit Breakers (e.g., heavily loading Neo4j)*: If Neo4j latency spikes > 500ms, fallback to a cached Redis index (inverted index of skills -> experts).
-- *Backpressure*: If WS clients slow down, drop non-critical "bounty update" packets; ensure reliable delivery only for "bounty matched to YOU" packets.
-
-## 6. Directory Structure
-
-```text
-/backend
-├── cmd/
-│   └── server/main.go
-├── internal/
-│   ├── api/
-│   │   ├── handlers/bounty.go
-│   │   └── middleware/auth.go
-│   ├── domain/
-│   │   ├── models/bounty.go
-│   │   └── state/escrow.go
-│   ├── infrastructure/
-│   │   ├── neo4j/graph_repo.go
-│   │   ├── postgres/relational_repo.go
-│   │   └── redis/pubsub.go
-│   └── service/
-│       ├── matcher.go
-│       └── checkout.go
-├── pkg/
-│   └── logger/
-└── docker-compose.yml
-
-/frontend
-├── app/
-├── components/
-├── hooks/
-│   └── useBountyStream.ts
-└── package.json
+```powershell
+cd frontend
+npm ci
+npm run dev
 ```
 
-## 7. API Contracts (Sample)
+The frontend defaults to the deployed demo API. For local work, create `frontend/.env.local` with:
 
-**POST /api/v1/bounties**
+```dotenv
+NEXT_PUBLIC_API_URL=http://localhost:8080
+```
+
+API health: `http://localhost:8080/api/v1/health`. Neo4j Browser: `http://localhost:7474` (`neo4j` / `password` in this local-only Compose setup).
+
+## API
+
+### `POST /api/v1/bounties`
+
+Required header: `X-Idempotency-Key` (up to 256 characters).
+
 ```json
 {
-  "title": "Need help debugging Kafka offset lag",
-  "description": "...",
-  "skills": ["Kafka", "Go", "Distributed Systems"],
+  "title": "Need help with API latency",
+  "description": "Latency increased after a recent change.",
+  "skills": ["Go", "PostgreSQL"],
   "bounty_amount": 150,
-  "ttl_seconds": 3600
+  "ttl_seconds": 3600,
+  "poster_team": "Commerce"
 }
 ```
-*Response*: `202 Accepted` (Matching triggered async)
 
-**POST /api/v1/escrow/{id}/release**
-*Headers*: `X-Idempotency-Key: uuid`
-*Response*: `200 OK`
+Returns `{ "status", "message", "bounty" }`, preserving the existing frontend response envelope. A successful first request returns `201`; a replay returns `200`. The same key with a different normalized payload returns `409`. A concurrent retry while the original request is still running receives `409` and can retry with the same key after it completes.
 
-## 8. Resume Optimization Layer
+### `GET /api/v1/bounties`
 
-*How you should describe this project on your Senior/Staff resume:*
+Returns the latest 100 persisted requests and marks open requests past their expiration time as `EXPIRED`. Repeated reads can use the Redis feed cache; a new bounty advances the cache revision so later reads use fresh data.
 
-- **Distributed Systems & Scale**: "Architected an event-driven Knowledge Relay Platform for 10K+ engineers. Decoupled matching logic using Pub/Sub and WebSocket fan-outs, supporting bursting loads without degrading core API latency."
-- **Graph Processing**: "Implemented a skills-based matching engine using Neo4j and Cypher. Engineered a custom personalized PageRank algorithm with time-decay heuristics to surface top-tier domain experts across organizational silos."
-- **State Machine & Financials**: "Designed a robust, double-entry Escrow state machine in Go/PostgreSQL. Enforced strict idempotency and optimistic concurrency controls to guarantee 0% race-condition anomalies during payout transitions."
-- **Architecture Leadership (Staff Level)**: "Drove architectural decisions mapping polyglot persistence to domain needs: Neo4j for deep relationship traversals, Postgres for ACID transaction boundaries, and Redis for distributed rate-limiting and session state."
+## Tests
+
+```powershell
+cd backend
+go test ./...
+```
+
+The persistence integration test is skipped unless `TEST_POSTGRES_URL` and `TEST_REDIS_URL` are set. The Neo4j ranking integration test is skipped unless `TEST_NEO4J_URI`, `TEST_NEO4J_USERNAME`, and `TEST_NEO4J_PASSWORD` are set. Use a disposable test database/graph because these tests create tables and temporary graph fixtures.
+
+```powershell
+$env:TEST_POSTGRES_URL = "postgres://user:pass@localhost:5432/db?sslmode=disable"
+$env:TEST_REDIS_URL = "redis://localhost:6379/0"
+$env:TEST_NEO4J_URI = "bolt://localhost:7687"
+$env:TEST_NEO4J_USERNAME = "neo4j"
+$env:TEST_NEO4J_PASSWORD = "password"
+go test ./...
+```
+
+## Honest scope and limitations
+
+This is a demo, not a production marketplace. It has no authentication/authorization, payment processing, escrow/payout workflow, Redis Pub/Sub, WebSocket server, or asynchronous matching worker. Matching is synchronous. The short feed-cache TTL is an implementation optimization, not evidence of a latency target: no latency or percentage-improvement benchmark has been run, so do not claim a sub-200 ms SLA or a 35% improvement without reproducible measurements.
+
+## Resume wording grounded in this code
+
+> Built a Go/Gin API for cross-team engineering help requests, persisting bounties in PostgreSQL and ranking experts from a Neo4j skill graph using proficiency and activity recency.
+>
+> Added Redis-backed idempotency and short-lived feed caching, with payload-conflict detection and PostgreSQL-backed result replay; created a deterministic Neo4j seed utility configured to generate 10,000 synthetic engineers and 50,000 skill edges.
