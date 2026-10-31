@@ -1,0 +1,16 @@
+skill_id,name,category
+skill-go,Go,Backend
+skill-kafka,Kafka,Distributed Systems
+skill-neo4j,Neo4j,Graph DB
+skill-postgres,PostgreSQL,Database
+skill-redis,Redis,Cache
+skill-nextjs,Next.js,Frontend
+skill-react,React,Frontend
+skill-typescript,TypeScript,Frontend
+skill-kubernetes,Kubernetes,Infrastructure
+skill-observability,Observability,Infrastructure
+skill-python,Python,Backend
+skill-mlops,MLOps,AI
+skill-security,AppSec,Security
+skill-terraform,Terraform,Infrastructure
+skill-spark,Spark,Data
